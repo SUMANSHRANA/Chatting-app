@@ -13,15 +13,34 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
+// ✅ Allowed origins (local + deployed frontend)
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.CLIENT_URL
+];
+
+// ✅ Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
+// ✅ CORS middleware (Express)
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
+  credentials: true
+}));
+
 // Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -37,7 +56,7 @@ app.get("/", (req, res) => res.json({ message: "ChatApp API Running 🚀" }));
 // Error middleware (must be last)
 app.use(errorHandler);
 
-// Socket.io
+// Socket handler
 socketHandler(io);
 
 const PORT = process.env.PORT || 5000;
